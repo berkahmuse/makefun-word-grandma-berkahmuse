@@ -17,6 +17,9 @@ import os
 import sys
 
 WORD = "ALEXA"
+ENCODING = "utf-8"
+# The exact bytes the entry must contain: A-L-E-X-A, no newline, no BOM.
+WORD_BYTES = WORD.encode(ENCODING)
 
 
 def main() -> int:
@@ -28,8 +31,17 @@ def main() -> int:
         return 1
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
     os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "entry.txt"), "w", encoding="utf-8") as f:
-        f.write(WORD)
+    out_path = os.path.join(out_dir, "entry.txt")
+    # Binary write: guarantees exactly WORD_BYTES, no newline translation,
+    # no encoding surprise on any platform.
+    with open(out_path, "wb") as f:
+        f.write(WORD_BYTES)
+    # Guard: read the file back and refuse to report success unless the
+    # bytes on disk are exactly the word (catches partial writes).
+    with open(out_path, "rb") as f:
+        if f.read() != WORD_BYTES:
+            print("entry.txt does not contain the expected word", file=sys.stderr)
+            return 1
     return 0
 
 
